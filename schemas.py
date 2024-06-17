@@ -7,7 +7,8 @@ class PostCreate(BaseModel):
     text: str
 
 
-class PostRead(PostCreate):
+# id field must be on first place in documentation
+class PostRead(BaseModel):
     id: int
     name: str
     text: str
