@@ -1,33 +1,37 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from models import Post
 from schemas import PostCreate, PostUpdate
 
 
-def get_all_posts(db: Session):
-    return db.query(Post).all()
+async def get_all_posts(db: AsyncSession):
+    return (await db.scalars(select(Post))).all()
 
 
-def get_post_by_id(id: int, db: Session):
-    return db.get(Post, id)
+async def get_post_by_id(id: int, db: AsyncSession):
+    return (await db.scalars(select(Post).where(Post.id == id))).first()
 
 
-def create_new_post(post: PostCreate, db: Session):
+async def create_new_post(post: PostCreate, db: Session):
     post_to_create = Post(**post.model_dump())
     db.add(post_to_create)
-    db.commit()
-    db.refresh(post_to_create)
+    await db.commit()
+    await db.refresh(post_to_create)
     return post_to_create
 
 
-def update_existing_post(post: Post, new_post: PostUpdate, db: Session):
+async def update_existing_post(post: Post, new_post: PostUpdate, db: Session):
     post.name = new_post.name
     post.text = new_post.text
-    db.commit()
-    db.refresh(post)
+    await db.commit()
+    await db.refresh(post)
     return post
 
 
-def delete_existing_post(post: Post, db: Session):
-    db.delete(post)
-    db.commit()
+async def delete_existing_post(post: Post, db: Session):
+    await db.delete(post)
+    await db.commit()
+    if await get_post_by_id(post.id, db) == None:
+        return True
+    return False

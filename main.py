@@ -1,4 +1,6 @@
-from db import SessionLocal, engine
+from contextlib import asynccontextmanager
+from typing import Annotated
+from db import sessionmanager
 from models import Base, Post
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
@@ -12,17 +14,37 @@ from crud import (
     update_existing_post,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 
+
+async def get_db_session():
+    async with sessionmanager.session() as session:
+        yield session
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Function that handles startup and shutdown events.
+    To understand more, read https://fastapi.tiangolo.com/advanced/events/
+    """
+    yield
+    if sessionmanager._engine is not None:
+        # Close the DB connection
+        await sessionmanager.close()
+
+
+DBSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
 
 app = FastAPI(title="Ales backend")
 
@@ -36,35 +58,37 @@ app.add_middleware(
 
 
 @app.get("/posts", response_model=PostsRead)
-def get_posts(db: Session = Depends(get_db)):
-    posts = get_all_posts(db)
+async def get_posts(db: DBSessionDep):
+    posts = await get_all_posts(db)
     return {"posts": posts, "items": len(posts)}
 
 
 @app.get("/posts/{id}", response_model=PostRead)
-def get_post(id: int, db: Session = Depends(get_db)):
-    post = get_post_by_id(id, db)
+async def get_post(id: int, db: DBSessionDep):
+    post = await get_post_by_id(id, db)
     if post == None:
         return JSONResponse(status_code=404, content={"message": "Not found"})
     return post
 
 
 @app.post("/posts", response_model=PostRead)
-def create_post(post: PostCreate, db: Session = Depends(get_db)):
-    return create_new_post(post, db)
+async def create_post(post: PostCreate, db: DBSessionDep):
+    return await create_new_post(post, db)
 
 
 @app.put("/posts/{id}", response_model=PostRead)
-def update_post(id: int, post: PostUpdate, db: Session = Depends(get_db)):
-    post_to_update = get_post_by_id(id, db)
+async def update_post(id: int, post: PostUpdate, db: DBSessionDep):
+    post_to_update = await get_post_by_id(id, db)
     if post_to_update == None:
         return JSONResponse(status_code=404, content={"message": "Not found"})
-    return update_existing_post(post_to_update, post, db)
+    return await update_existing_post(post_to_update, post, db)
 
 
 @app.delete("/posts/{id}", status_code=200)
-def delete_post(id: int, db: Session = Depends(get_db)):
-    post_to_delete = get_post_by_id(id, db)
+async def delete_post(id: int, db: DBSessionDep):
+    post_to_delete = await get_post_by_id(id, db)
     if post_to_delete == None:
         return JSONResponse(status_code=404, content={"Message": "Not Found"})
-    return delete_existing_post(post_to_delete, db)
+    result = await delete_existing_post(post_to_delete, db)
+    if result == False:
+        return JSONResponse(status_code=404, content={"Message": "Not Found"})
