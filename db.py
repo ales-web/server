@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from config import Settings
+from config import settings
 
 import contextlib
 from typing import Any, AsyncIterator
@@ -12,8 +12,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-
-settings = Settings()
 
 db_url = f"postgresql+asyncpg://{settings.db_username}:{settings.db_pass}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
 
