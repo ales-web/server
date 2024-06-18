@@ -16,9 +16,7 @@ class Base(DeclarativeBase):
 class Post(Base):
     __tablename__ = "posts"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True,
-    )
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str]
     text: Mapped[str]
     dateCreate: Mapped[datetime] = mapped_column(insert_default=get_time_utc)
