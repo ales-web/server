@@ -1,11 +1,14 @@
 from contextlib import asynccontextmanager
+import io
 from typing import Annotated
+
+from minio import Minio
 from db import sessionmanager
 from models import Base, Post
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, File, UploadFile
 from sqlalchemy.orm import Session
 from schemas import PostRead, PostsRead, PostCreate, PostUpdate
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from crud import (
     create_new_post,
     delete_existing_post,
@@ -47,6 +50,13 @@ async def lifespan(app: FastAPI):
 DBSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
 
 app = FastAPI(title="Ales backend")
+
+client = Minio(
+    "localhost:9000",
+    "mnv6aLL4RoYqNcBw9m9t",
+    "v7dpZVrFtDFHkTql2An1div8sKbXIpVeeOQj186P",
+    secure=False,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,3 +102,19 @@ async def delete_post(id: int, db: DBSessionDep):
     result = await delete_existing_post(post_to_delete, db)
     if result == False:
         return JSONResponse(status_code=404, content={"Message": "Not Found"})
+
+
+@app.get("/img/{file_name}")
+def download_image(file_name: str):
+    try:
+        response = client.get_object("s3test", file_name)
+    finally:
+        data = io.BytesIO(response.read())
+        response.close()
+        response.release_conn()
+        return StreamingResponse(data, media_type="image/png")
+
+
+@app.post("/img")
+def upload_image(file: Annotated[bytes, File()]):
+    client.put_object("s3test", "test file.webp", io.BytesIO(file), len(file))
