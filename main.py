@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 import io
 from typing import Annotated
 
-from minio import Minio
+from boto3 import client
 from db import sessionmanager
 from models import Base, Post
 from fastapi import Depends, FastAPI, File, UploadFile
@@ -51,11 +51,11 @@ DBSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
 
 app = FastAPI(title="Ales backend")
 
-client = Minio(
-    "localhost:9000",
-    "mnv6aLL4RoYqNcBw9m9t",
-    "v7dpZVrFtDFHkTql2An1div8sKbXIpVeeOQj186P",
-    secure=False,
+client = client(
+    "s3",
+    endpoint_url="http://localhost:9000",
+    aws_access_key_id="mnv6aLL4RoYqNcBw9m9t",
+    aws_secret_access_key="v7dpZVrFtDFHkTql2An1div8sKbXIpVeeOQj186P",
 )
 
 app.add_middleware(
@@ -105,16 +105,13 @@ async def delete_post(id: int, db: DBSessionDep):
 
 
 @app.get("/img/{file_name}")
-def download_image(file_name: str):
-    try:
-        response = client.get_object("s3test", file_name)
-    finally:
-        data = io.BytesIO(response.read())
-        response.close()
-        response.release_conn()
-        return StreamingResponse(data, media_type="image/png")
+def download_image(file_name: str = None):
+    response = client.get_object(Bucket="s3test", Key=file_name)
+    return StreamingResponse(
+        io.BytesIO(response["Body"].read()), media_type="image/png"
+    )
 
 
 @app.post("/img")
-def upload_image(file: Annotated[bytes, File()]):
-    client.put_object("s3test", "test file.webp", io.BytesIO(file), len(file))
+def upload_image(file: UploadFile):
+    client.put_object(Body=file.file, Bucket="s3test", Key=file.filename)
