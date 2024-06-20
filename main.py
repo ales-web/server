@@ -105,13 +105,20 @@ async def delete_post(id: int, db: DBSessionDep):
 
 
 @app.get("/img/{file_name}")
-def download_image(file_name: str = None):
-    response = client.get_object(Bucket="s3test", Key=file_name)
-    return StreamingResponse(
-        io.BytesIO(response["Body"].read()), media_type="image/png"
-    )
+def download_image(file_name: str):
+    try:
+        response = client.get_object(Bucket="s3test", Key=file_name)
+        return StreamingResponse(
+            io.BytesIO(response["Body"].read()),
+            media_type=response["ResponseMetadata"]["HTTPHeaders"]["content-type"],
+        )
+    except:
+        return JSONResponse(status_code=500, content={"message": "Error"})
 
 
 @app.post("/img")
 def upload_image(file: UploadFile):
-    client.put_object(Body=file.file, Bucket="s3test", Key=file.filename)
+    try:
+        client.put_object(Body=file.file, Bucket="s3test", Key=file.filename)
+    except:
+        return JSONResponse(status_code=500, content={"message": "Error"})
