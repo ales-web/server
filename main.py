@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 import io
 from typing import Annotated
 
+import uuid
+
 from boto3 import client
 from db import sessionmanager
 from models import Base, Post
@@ -18,6 +20,7 @@ from crud import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
+from config import settings
 
 # Base.metadata.create_all(bind=engine)
 
@@ -53,9 +56,9 @@ app = FastAPI(title="Ales backend")
 
 client = client(
     "s3",
-    endpoint_url="http://localhost:9000",
-    aws_access_key_id="mnv6aLL4RoYqNcBw9m9t",
-    aws_secret_access_key="v7dpZVrFtDFHkTql2An1div8sKbXIpVeeOQj186P",
+    endpoint_url=settings.s3_url,
+    aws_access_key_id=settings.s3_access_key,
+    aws_secret_access_key=settings.s3_secret_access_key,
 )
 
 app.add_middleware(
@@ -107,7 +110,10 @@ async def delete_post(id: int, db: DBSessionDep):
 @app.get("/img/{file_name}")
 def download_image(file_name: str):
     try:
-        response = client.get_object(Bucket="s3test", Key=file_name)
+        response = client.get_object(
+            Bucket="acac74b6-6f4de482-0ffb-4ff8-8c12-1334195cb525", Key=file_name
+        )
+        # print(response["ResponseMetadata"]["RequestId"])
         return StreamingResponse(
             io.BytesIO(response["Body"].read()),
             media_type=response["ResponseMetadata"]["HTTPHeaders"]["content-type"],
@@ -119,6 +125,13 @@ def download_image(file_name: str):
 @app.post("/img")
 def upload_image(file: UploadFile):
     try:
-        client.put_object(Body=file.file, Bucket="s3test", Key=file.filename)
+        unique_id = str(uuid.uuid4())
+        client.put_object(
+            Body=file.file,
+            Bucket="acac74b6-6f4de482-0ffb-4ff8-8c12-1334195cb525",
+            Key=unique_id,
+            ContentType=file.headers["content-type"],
+        )
+        return unique_id
     except:
         return JSONResponse(status_code=500, content={"message": "Error"})

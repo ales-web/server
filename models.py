@@ -1,6 +1,7 @@
 from datetime import datetime
 
 # from db import SQLBase
+from sqlalchemy import Column, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import DeclarativeBase
 
@@ -23,3 +24,5 @@ class Post(Base):
     dateUpdate: Mapped[datetime] = mapped_column(
         insert_default=get_time_utc, onupdate=get_time_utc
     )
+    picture: Mapped[str] = mapped_column(nullable=True)
+    views: Mapped[int] = mapped_column(server_default="0")

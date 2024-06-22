@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     db_host: str
     db_port: str
     db_name: str
+    s3_url: str
+    s3_access_key: str
+    s3_secret_access_key: str
     model_config = SettingsConfigDict(env_file=".env")
 
 

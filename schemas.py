@@ -5,6 +5,7 @@ from pydantic import BaseModel
 class PostCreate(BaseModel):
     name: str
     text: str
+    picture: str | None = None
 
 
 # id field must be on first place in documentation
@@ -14,10 +15,13 @@ class PostRead(BaseModel):
     text: str
     dateCreate: datetime
     dateUpdate: datetime
+    picture: str | None
 
 
 class PostUpdate(PostCreate):
-    pass
+    name: str | None = None
+    text: str | None = None
+    picture: str | None = None
 
 
 class PostsRead(BaseModel):

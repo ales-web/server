@@ -22,8 +22,9 @@ async def create_new_post(post: PostCreate, db: Session):
 
 
 async def update_existing_post(post: Post, new_post: PostUpdate, db: Session):
-    post.name = new_post.name
-    post.text = new_post.text
+    updated_post = new_post.model_dump(exclude_unset=True)
+    for key, value in updated_post.items():
+        setattr(post, key, value)
     await db.commit()
     await db.refresh(post)
     return post
