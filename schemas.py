@@ -6,6 +6,7 @@ class PostCreate(BaseModel):
     name: str
     text: str
     picture: str | None = None
+    views: int = 0
 
 
 # id field must be on first place in documentation
@@ -16,12 +17,12 @@ class PostRead(BaseModel):
     dateCreate: datetime
     dateUpdate: datetime
     picture: str | None
+    views: int
 
 
 class PostUpdate(PostCreate):
     name: str | None = None
     text: str | None = None
-    picture: str | None = None
 
 
 class PostsRead(BaseModel):
